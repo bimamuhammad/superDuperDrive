@@ -1,9 +1,9 @@
 package com.udacity.jwdnd.course1.cloudstorage;
 
+import com.udacity.jwdnd.course1.cloudstorage.pageobjects.HomePage;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.junit.jupiter.api.*;
 import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -15,6 +15,8 @@ import org.springframework.boot.web.server.LocalServerPort;
 import java.io.File;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CloudStorageApplicationTests {
+
+	private HomePage homePage;
 
 	@LocalServerPort
 	private int port;
@@ -52,7 +54,7 @@ class CloudStorageApplicationTests {
 		// Create a dummy account for logging in later.
 
 		// Visit the sign-up page.
-		WebDriverWait webDriverWait = new WebDriverWait(driver, 2);
+		WebDriverWait webDriverWait = new WebDriverWait(driver, 10);
 		driver.get("http://localhost:" + this.port + "/signup");
 		webDriverWait.until(ExpectedConditions.titleContains("Sign Up"));
 		
@@ -117,13 +119,6 @@ class CloudStorageApplicationTests {
 
 		webDriverWait.until(ExpectedConditions.titleContains("Home"));
 
-	}
-
-	private void doLogout(){
-		WebDriverWait webDriverWait = new WebDriverWait(driver, 10);
-		WebElement logoutElement = driver.findElement(By.id("logout"));
-		logoutElement.click();
-		webDriverWait.until(ExpectedConditions.urlContains("login-logout"));
 	}
 
 	/**
@@ -232,7 +227,10 @@ class CloudStorageApplicationTests {
 		doLogIn("bensima", "password");
 		Assertions.assertEquals("http://localhost:" + this.port + "/home", driver.getCurrentUrl());
 
-		doLogout();
+		WebDriverWait webDriverWait = new WebDriverWait(driver, 2);
+		WebElement logoutElement = driver.findElement(By.id("logout"));
+		logoutElement.click();
+		webDriverWait.until(ExpectedConditions.urlContains("login-logout"));
 		driver.get("http://localhost:" + this.port + "/home");
 		Assertions.assertNotEquals("http://localhost:" + this.port + "/home", driver.getCurrentUrl());
 		Assertions.assertEquals("http://localhost:" + this.port + "/login", driver.getCurrentUrl());
@@ -244,8 +242,102 @@ class CloudStorageApplicationTests {
 	 */
 	@Test
 	public void testNoteFuntion(){
+		doMockSignUp("bima", "Sima", "bensimaa", "password");
+		doLogIn("bensima", "password");
+		driver.get("http://localhost:" + this.port + "/home");
+		homePage = new HomePage(driver);
+
+		// Open notes tab
+		WebDriverWait wait = new WebDriverWait(driver, 20);
+		homePage.openTab("notes");
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("addNote")));
+		homePage.openNotes();
+
+		// Add new note
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("note-title")));
+		homePage.addNotes("first", "I love this");
+		homePage.openTab("notes");
+		wait.until(ExpectedConditions.presenceOfElementLocated(By.id("rowfirst")));
+		WebElement row = driver.findElement(By.id("rowfirst"));
+
+		wait.until(ExpectedConditions.textToBePresentInElement(row,"I love this" ));
+		Assertions.assertTrue(driver.findElement(By.id("rowfirst")).getText().contains("I love this"));
+
+		// Edit Existing
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("editfirst"))).click();
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("note-title")));
+		homePage.addNotes("", " Now it has been edited");
+		homePage.openTab("notes");
+		wait.until(ExpectedConditions.presenceOfElementLocated(By.id("rowfirst")));
+		row = driver.findElement(By.id("rowfirst"));
+
+		wait.until(ExpectedConditions.textToBePresentInElement(row,"first" ));
+		Assertions.assertTrue(driver.findElement(By.id("rowfirst")).getText().contains("I love this Now it has been edited"));
+
+		// Delete  note
+		homePage.openTab("notes");
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("delfirst"))).click();
+		WebElement del = null;
+		try{
+			del = driver.findElement(By.id("rowfirst"));
+		}catch (Exception exception){
+			System.out.print("Element s null");
+		}
+		Assertions.assertNull(del);
 
 	}
 
+	/**
+	 * Write Tests for Credential Creation, Viewing, Editing, and Deletion
+	 */
+	@Test
+	public void testCredentials(){
+		doMockSignUp("bima", "Sima", "biaa", "password");
+		doLogIn("biaa", "password");
+		driver.get("http://localhost:" + this.port + "/home");
+		homePage = new HomePage(driver);
+
+		homePage.openTab("creds");
+		WebDriverWait wait = new WebDriverWait(driver, 20);
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("addCred"))).click();
+
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("credential-url")));
+		homePage.setAddCredential("google.com", "ilham", "tg111234");
+		homePage.openTab("creds");
+		;
+
+		wait.until(ExpectedConditions.textToBePresentInElement(
+				wait.until(ExpectedConditions.presenceOfElementLocated(By.id("credgoogle.com"))),
+				"google.com" ));
+		Assertions.assertTrue(driver.findElement(By.id("credgoogle.com")).getText().contains("google.com"));
+		Assertions.assertEquals(driver.findElement(By.id("credgoogle.comusername")).getText(), "ilham");
+		Assertions.assertNotEquals(driver.findElement(By.id("credgoogle.comencpwd")).getText(), "tg111234");
+
+		// View saved credential
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("editcredgoogle.com"))).click();
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("credential-password")));
+		Assertions.assertEquals(homePage.getCredentialPassword().getAttribute("value"), "tg111234");
+
+		// Edit the credential
+		homePage.setAddCredential("google.com", "sahib", "tg122234");
+		homePage.openTab("creds");
+		// Verify password has changed
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("editcredgoogle.com"))).click();
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("credential-password")));
+		Assertions.assertNotEquals(homePage.getCredentialPassword().getAttribute("value"), "tg111234");
+		Assertions.assertEquals(homePage.getCredentialPassword().getAttribute("value"), "tg122234");
+
+		// Delete Credential
+		WebElement closeButton = driver.findElement(By.id("close-btn"));
+		closeButton.click();
+		wait.until(ExpectedConditions.elementToBeClickable(By.id("delcredgoogle.com"))).click();
+		WebElement del = null;
+		try{
+			del = driver.findElement(By.id("credgoogle.com"));
+		}catch (Exception exception){
+			System.out.print("Element s null");
+		}
+		Assertions.assertNull(del);
+	}
 
 }

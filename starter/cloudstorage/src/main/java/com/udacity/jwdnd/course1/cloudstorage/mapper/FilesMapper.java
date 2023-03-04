@@ -21,6 +21,6 @@ public interface FilesMapper {
     @Options(useGeneratedKeys = true, keyProperty = "fileId")
     Integer addFile(Files files);
 
-    @Delete("DELETE FROM FILES WHERE fileId = #{fileId}")
-    boolean removeFile(Integer fileId);
+    @Delete("DELETE FROM FILES WHERE fileId = #{fileId} AND userid=#{userid}")
+    boolean removeFile(Integer fileId, Integer userid);
 }

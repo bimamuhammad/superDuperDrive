@@ -21,9 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.http.HttpResponse;
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.List;
 
 @Controller
@@ -33,15 +30,13 @@ public class HomeController {
     private final FilesMapper filesMapper;
     private final NoteMapper noteMapper;
     private final CredentialMapper credentialMapper;
-    private final EncryptionService encryptionService;
     private  final HomeService homeService;
 
-    public HomeController(UserMapper userMapper, FilesMapper filesMapper, NoteMapper noteMapper, CredentialMapper credentialMapper, EncryptionService encryptionService, HomeService homeService) {
+    public HomeController(UserMapper userMapper, FilesMapper filesMapper, NoteMapper noteMapper, CredentialMapper credentialMapper, HomeService homeService) {
         this.userMapper = userMapper;
         this.filesMapper = filesMapper;
         this.noteMapper = noteMapper;
         this.credentialMapper = credentialMapper;
-        this.encryptionService = encryptionService;
         this.homeService = homeService;
 
     }
@@ -92,10 +87,13 @@ public class HomeController {
 
             if(!this.homeService.fileExists(file.getOriginalFilename(), user.getUserid()) && file.getSize()>0) {
                 Files uploadedFile = new Files(null, file.getOriginalFilename(), file.getContentType(), Long.toString(file.getSize()), user.getUserid(), file.getBytes());
-                this.filesMapper.addFile(uploadedFile);
-                model.addAttribute("signpsuccess", "File upload successful");
+                if(this.filesMapper.addFile(uploadedFile)>0) {
+                    model.addAttribute("updateMessage", "File upload successful");
+                }else{
+                    model.addAttribute("updateMessage", "File upload unsuccessful");
+                }
             }else{
-                model.addAttribute("fileuploadMessage", "File already exists or is null");
+                model.addAttribute("updateMessage", "File already exists or is null");
             }
             // load files for display
             List<Files> files = filesMapper.getFiles(user.getUserid());
@@ -139,9 +137,17 @@ public class HomeController {
         }else {
             notes.setUserid(user.getUserid());
             if(notes.getNoteid() == null) {
-                this.noteMapper.addNote(notes);
+                if(this.noteMapper.addNote(notes)>0) {
+                    model.addAttribute("updateMessage", "Note upload successful");
+                }else{
+                    model.addAttribute("updateMessage", "Note upload unsuccessful");
+                }
             }else{
-                this.noteMapper.updateNotes(notes);
+                if(this.noteMapper.updateNotes(notes)>0){
+                    model.addAttribute("updateMessage", "Note update successful");
+                }else{
+                    model.addAttribute("updateMessage", "Note upload unsuccessful");
+                }
             }
 
             List<Files> files = filesMapper.getFiles(user.getUserid());
@@ -185,9 +191,17 @@ public class HomeController {
         }else {
             Credentials creds = homeService.createCredential(credentials, user.getUserid());
             if(credentials.getCredentialid() == null) {
-                this.credentialMapper.createCredential(creds);
+                if(this.credentialMapper.createCredential(creds)>0) {
+                    model.addAttribute("updateMessage", "Cred update successful");
+                }else {
+                    model.addAttribute("updateMessage", "Cred update unsuccessful");
+                }
             }else{
-                this.credentialMapper.updateCredential(creds);
+                if(this.credentialMapper.updateCredential(creds)>0){
+                    model.addAttribute("updateMessage", "Cred update successful");
+                }else {
+                    model.addAttribute("updateMessage", "Cred update unsuccessful");
+                }
             }
 
             List<Files> files = filesMapper.getFiles(user.getUserid());
@@ -211,11 +225,23 @@ public class HomeController {
             System.out.println("Not authenticated");
         }else {
             if(fileId!=null){
-                filesMapper.removeFile(fileId);
+                if(filesMapper.removeFile(fileId, user.getUserid())) {
+                    model.addAttribute("updateMessage", "File was deleted successful");
+                }else{
+                    model.addAttribute("updateMessage", "File deletion not successful");
+                }
             } else if (noteId!=null) {
-                noteMapper.removeNote(noteId);
+                if(noteMapper.removeNote(noteId, user.getUserid())) {
+                    model.addAttribute("updateMessage", "Note was deleted successful");
+                }else{
+                    model.addAttribute("updateMessage", "Note deletion not successful");
+                }
             } else if (credId != null) {
-                credentialMapper.removeCredential(credId);
+                if(credentialMapper.removeCredential(credId, user.getUserid())) {
+                    model.addAttribute("updateMessage", "Cred was deleted successful");
+                }else{
+                    model.addAttribute("updateMessage", "Note deletion not successful");
+                }
             }
 
             List<Files> files = filesMapper.getFiles(user.getUserid());
