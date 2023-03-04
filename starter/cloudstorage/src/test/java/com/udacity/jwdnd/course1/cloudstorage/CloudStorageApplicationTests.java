@@ -119,6 +119,13 @@ class CloudStorageApplicationTests {
 
 	}
 
+	private void doLogout(){
+		WebDriverWait webDriverWait = new WebDriverWait(driver, 10);
+		WebElement logoutElement = driver.findElement(By.id("logout"));
+		logoutElement.click();
+		webDriverWait.until(ExpectedConditions.urlContains("login-logout"));
+	}
+
 	/**
 	 * PLEASE DO NOT DELETE THIS TEST. You may modify this test to work with the 
 	 * rest of your code. 
@@ -200,6 +207,45 @@ class CloudStorageApplicationTests {
 
 	}
 
+	/**
+	 * Unauthorized users can access signup and login pages only
+	 */
+	@Test
+	public void testUnauthUsers(){
+		WebDriverWait webDriverWait = new WebDriverWait(driver, 2);
+		driver.get("http://localhost:" + this.port + "/login");
+
+		Assertions.assertEquals("http://localhost:" + this.port + "/login", driver.getCurrentUrl());
+
+		driver.get("http://localhost:" + this.port + "/signup");
+		Assertions.assertEquals("http://localhost:" + this.port + "/signup", driver.getCurrentUrl());
+
+		driver.get("http://localhost:" + this.port + "/home");
+		Assertions.assertNotEquals("http://localhost:" + this.port + "/home", driver.getCurrentUrl());
+		Assertions.assertEquals("http://localhost:" + this.port + "/login", driver.getCurrentUrl());
+	}
+
+	@Test
+	public void testSignUpLoginLogout(){
+		doMockSignUp("bima", "Sima", "bensima", "password");
+
+		doLogIn("bensima", "password");
+		Assertions.assertEquals("http://localhost:" + this.port + "/home", driver.getCurrentUrl());
+
+		doLogout();
+		driver.get("http://localhost:" + this.port + "/home");
+		Assertions.assertNotEquals("http://localhost:" + this.port + "/home", driver.getCurrentUrl());
+		Assertions.assertEquals("http://localhost:" + this.port + "/login", driver.getCurrentUrl());
+
+	}
+
+	/**
+	 * Write Tests for Note Creation, Viewing, Editing, and Deletion.
+	 */
+	@Test
+	public void testNoteFuntion(){
+
+	}
 
 
 }
